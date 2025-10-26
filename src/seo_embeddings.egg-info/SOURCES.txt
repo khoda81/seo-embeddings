@@ -4,6 +4,7 @@ src/emcache/__init__.py
 src/emcache/base.py
 src/emcache/huggingface.py
 src/emcache/ollama.py
+src/emseo/storage.py
 src/seo_embeddings.egg-info/PKG-INFO
 src/seo_embeddings.egg-info/SOURCES.txt
 src/seo_embeddings.egg-info/dependency_links.txt
