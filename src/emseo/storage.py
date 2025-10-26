@@ -29,9 +29,12 @@ class VectorStoreEmbedding:
 
     def _ensure_collection(self, distance: Distance):
         if self.qdrant.collection_exists(self.collection_name):
-            # Delete existing collection for fresh start
-            logger.info(f"🧩 Deleting existing Qdrant collection: {self.collection_name}")
-            self.qdrant.delete_collection(self.collection_name)
+            points = self.info().points_count
+
+            logger.info(
+                f"🧩 Using existing Qdrant collection: {self.collection_name} with {points} points"
+            )
+            return
 
         logger.info(f"🧩 Creating Qdrant collection: {self.collection_name}")
         self.qdrant.create_collection(
@@ -76,8 +79,10 @@ class VectorStoreEmbedding:
     ) -> QueryResponse:
         if isinstance(query, str):
             vector = self.embedder.embed([query]).embedding[0].cpu().tolist()
+
         elif isinstance(query, list):
             vector = query
+
         else:
             raise ValueError("Query must be a string or a list of floats.")
 
