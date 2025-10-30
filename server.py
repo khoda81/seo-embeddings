@@ -139,7 +139,7 @@ def search(query: str = Query(...), top_k: int = 32):
 
 class KeywordResult(BaseModel):
     keyword: str
-    score: float
+    similarity: float
 
 
 @app.get("/similar-keywords", response_model=list[KeywordResult])
