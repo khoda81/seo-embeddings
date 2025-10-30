@@ -20,6 +20,7 @@ dotenv.load_dotenv()
 # ------------------------------
 BACKEND = os.getenv("BACKEND", "huggingface").lower()
 MODEL_NAME = os.getenv("MODEL_NAME", "intfloat/multilingual-e5-large")
+QDRANT_URL = os.getenv("QDRANT_URL", "http://127.0.0.1:6333")
 
 
 logging.basicConfig(
@@ -68,7 +69,11 @@ else:
     raise ValueError(f"Unrecognized backend {BACKEND}")
 
 
-storage = VectorStoreEmbedding(backend, collection_prefix="keywords")
+storage = VectorStoreEmbedding(
+    backend,
+    collection_prefix="keywords",
+    qdrant_url=QDRANT_URL,
+)
 logger.info("VectorStoreEmbedding initialized successfully.")
 
 
