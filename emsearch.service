@@ -1,0 +1,17 @@
+[Unit]
+Description=FastAPI app
+After=network.target
+
+[Service]
+User=root
+Group=root
+WorkingDirectory=/srv/fastapi
+Environment="PATH=/srv/fastapi/.venv/bin"
+ExecStart=/srv/fastapi/.venv/bin/uvicorn server:app --host 0.0.0.0 --port 8000
+
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target
