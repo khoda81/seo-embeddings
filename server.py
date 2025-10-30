@@ -1,27 +1,3 @@
-# import argparse
-
-
-# def parse_args():
-#     parser = argparse.ArgumentParser(description="Website Semantic Search API")
-#     parser.add_argument(
-#         "--backend",
-#         type=str,
-#         choices=["huggingface", "ollama"],
-#         default="huggingface",
-#         help="Select the embedding backend to use.",
-#     )
-
-#     parser.add_argument(
-#         "--model-name",
-#         type=str,
-#         help="Optional custom model name (overrides defaults).",
-#     )
-
-#     return parser.parse_args()
-
-
-# args = parse_args()
-
 import logging
 import os
 from pathlib import Path
@@ -39,12 +15,12 @@ from emseo.storage import VectorStoreEmbedding
 dotenv.load_dotenv()
 
 
-class Args:
-    backend: str = "huggingface"
-    model_name: str = "intfloat/multilingual-e5-large"
+# ------------------------------
+# Configuration
+# ------------------------------
+BACKEND = os.getenv("BACKEND", "huggingface").lower()
+MODEL_NAME = os.getenv("MODEL_NAME", "intfloat/multilingual-e5-large")
 
-
-args = Args()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -78,18 +54,18 @@ logger.info(
 # logger.info("Test query result:\n%s", df.head())
 
 # Select Backend
-if args.backend == "ollama":
-    model_name = args.model_name or "nomic-text-embed"
+if BACKEND == "ollama":
+    model_name = MODEL_NAME or "nomic-text-embed"
     backend = OllamaBackend(model=model_name, base_url="http://127.0.0.1:11434")
     logger.info("Using Ollama backend with model '%s'", model_name)
 
-elif args.backend == "huggingface":
-    model_name = args.model_name or "intfloat/multilingual-e5-large"
+elif BACKEND == "huggingface":
+    model_name = MODEL_NAME or "intfloat/multilingual-e5-large"
     backend = HuggingFaceBackend(model_name=model_name)
     logger.info("Using HuggingFace backend with model '%s'", model_name)
 
 else:
-    raise ValueError(f"Unrecognized backend {args.backend}")
+    raise ValueError(f"Unrecognized backend {BACKEND}")
 
 
 storage = VectorStoreEmbedding(backend, collection_prefix="keywords")
@@ -154,6 +130,34 @@ def search(query: str = Query(...), top_k: int = 32):
 
     logger.debug("Results: %s", result)
     return result
+
+
+class KeywordResult(BaseModel):
+    keyword: str
+    score: float
+
+
+@app.get("/similar-keywords", response_model=list[KeywordResult])
+def similar_keywords(query: str = Query(...), top_k: int = 32):
+    """Search keywords similar to the input query."""
+
+    results = storage.search(query=query, top_k=top_k)
+    logger.info("Retrieved %d results from vector store", len(results.points))
+
+    kw_website_pairs = []
+    for r in results.points:
+        if "text" in r.payload:
+            kw_website_pairs.append(
+                {
+                    "similarity": r.score,
+                    "keyword": r.payload["text"],
+                }
+            )
+
+        else:
+            logger.warning("Missing 'text' in payload: %s", r.payload)
+
+    return kw_website_pairs
 
 
 if __name__ == "__main__":
