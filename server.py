@@ -165,6 +165,48 @@ def similar_keywords(query: str = Query(...), top_k: int = 32):
     return kw_website_pairs
 
 
+class RankEntry(BaseModel):
+    keyword: str
+    rank: int
+    similarity: float
+
+
+@app.get("/ranking-entries", response_model=list[RankEntry])
+def entries(query: str = Query(...), top_k: int = 32):
+    """Search keywords similar to the input query."""
+
+    results = storage.search(query=query, top_k=top_k)
+    logger.info("Retrieved %d results from vector store", len(results.points))
+
+    kw_website_pairs = []
+    for r in results.points:
+        if "text" in r.payload:
+            kw_website_pairs.append(
+                {
+                    "similarity": r.score,
+                    "keyword": r.payload["text"],
+                }
+            )
+
+        else:
+            logger.warning("Missing 'text' in payload: %s", r.payload)
+
+    kw_website_pairs = pd.DataFrame(kw_website_pairs)
+    query_ranks = Path("queries/website_by_keyword.sql").read_text(encoding="utf-8")
+    logger.debug("Query: %s", query_ranks)
+    logger.debug("Parameters: %s", kw_website_pairs.head())
+
+    ranks = ch_client.query_df(
+        query_ranks,
+        parameters={
+            "keywords": kw_website_pairs["keyword"].tolist(),
+            "similarity": kw_website_pairs["similarity"].tolist(),
+        },
+    ).rename(columns={"q.similarity": "similarity"})
+
+    return ranks.to_dict(orient="records")
+
+
 if __name__ == "__main__":
     logger.info("Starting API...")
     import uvicorn
