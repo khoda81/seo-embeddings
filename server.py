@@ -167,7 +167,8 @@ def similar_keywords(query: str = Query(...), top_k: int = 32):
 
 class RankEntry(BaseModel):
     keyword: str
-    rank: int
+    website: str
+    average_position: int
     similarity: float
 
 
