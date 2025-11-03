@@ -80,7 +80,7 @@ class VectorStoreEmbedding:
     ) -> QueryResponse:
         if isinstance(query, str):
             if not cached:
-                vector = [self.embedder.backend.embed_texts([query])]
+                vector = self.embedder.backend.embed_texts([query])[0]
 
             else:
                 vector = self.embedder.embed([query]).embedding[0].cpu().tolist()
