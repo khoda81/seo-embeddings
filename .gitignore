@@ -25,3 +25,4 @@ Thumbs.db
 model/
 .env
 eval/
+dataset/
