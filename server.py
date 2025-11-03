@@ -153,14 +153,24 @@ def similar_keywords(
     """Search keywords similar to the input query."""
 
     if augmentation:
-        query = generate_similar_terms(
+        queries = generate_similar_terms(
             term=query,
             model=OPENROUTER_MODEL,
             openai_client=openai_client,
         )
-        
-        results = storage.search(query=query, top_k=top_k)
-        
+
+        results = storage.search_batched(queries=queries, top_k=top_k)
+        scores = {}
+        for result in results:
+            for r in result.points:
+                if "text" in r.payload:
+                    scores[r.payload["text"]] += r.score
+
+                else:
+                    logger.warning("Missing 'text' in payload: %s", r.payload)
+
+        n = len(queries)
+        return [KeywordResult(kw, sc / n) for (kw, sc) in scores.items()]
 
     results = storage.search(query=query, top_k=top_k)
     logger.info("Retrieved %d results from vector store", len(results.points))
