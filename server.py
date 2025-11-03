@@ -1,5 +1,6 @@
 import logging
 import os
+from collections import defaultdict
 from pathlib import Path
 
 import clickhouse_connect
@@ -160,7 +161,7 @@ def similar_keywords(
         )
 
         results = storage.search_batched(queries=queries, top_k=top_k)
-        scores = {}
+        scores = defaultdict(float)
         for result in results:
             for r in result.points:
                 if "text" in r.payload:
