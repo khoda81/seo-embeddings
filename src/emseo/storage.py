@@ -2,7 +2,7 @@ import logging
 
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import CollectionInfo, QueryResponse
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from qdrant_client.models import Distance, PointStruct, QueryRequest, VectorParams
 
 from emcache.base import BaseCachedEmbedding
 
@@ -79,11 +79,11 @@ class VectorStoreEmbedding:
         cached: bool = False,
     ) -> QueryResponse:
         if isinstance(query, str):
-            if not cached:
-                vector = self.embedder.backend.embed_texts([query])[0]
+            if cached:
+                vector = self.embedder.embed([query]).embedding[0].cpu().tolist()
 
             else:
-                vector = self.embedder.embed([query]).embedding[0].cpu().tolist()
+                vector = self.embedder.backend.embed_texts([query])[0]
 
         elif isinstance(query, list):
             vector = query
@@ -97,6 +97,43 @@ class VectorStoreEmbedding:
             limit=top_k,
             with_payload=with_payload,
             score_threshold=score_threshold,
+        )
+
+        return results
+
+    def search_batched(
+        self,
+        queries: list[str] | list[list[float]],
+        top_k: int = 5,
+        with_payload: bool = True,
+        score_threshold: float | None = None,
+        cached: bool = False,
+    ) -> list[QueryResponse]:
+        """Performs a batched search for multiple queries."""
+        if isinstance(queries[0], str):
+            if cached:
+                vectors = self.embedder.embed(queries).embedding.cpu().tolist()
+
+            else:
+                vectors = self.embedder.backend.embed_texts(queries)
+
+        elif isinstance(queries, list):
+            vectors = queries
+
+        else:
+            raise ValueError("Query must be a string or a list of floats.")
+
+        results = self.qdrant.query_batch_points(
+            collection_name=self.collection_name,
+            requests=[
+                QueryRequest(
+                    query=v,
+                    limit=top_k,
+                    with_payload=with_payload,
+                    score_threshold=score_threshold,
+                )
+                for v in vectors
+            ],
         )
 
         return results

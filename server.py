@@ -6,10 +6,12 @@ import clickhouse_connect
 import dotenv
 import pandas as pd
 from fastapi import FastAPI, Query
+from openai import OpenAI
 from pydantic import BaseModel
 
 from emcache import OllamaBackend
 from emcache.huggingface import HuggingFaceBackend
+from emseo.backend.agent import generate_similar_terms
 from emseo.storage import VectorStoreEmbedding
 
 dotenv.load_dotenv()
@@ -21,6 +23,7 @@ dotenv.load_dotenv()
 BACKEND = os.getenv("BACKEND", "huggingface").lower()
 MODEL_NAME = os.getenv("MODEL_NAME", "intfloat/multilingual-e5-large")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://127.0.0.1:6333")
+OPENROUTER_MODEL = "gpt-4o-mini"
 
 
 logging.basicConfig(
@@ -47,12 +50,6 @@ logger.info(
     os.getenv("CLICKHOUSE_PORT"),
 )
 
-# logger.info("Testing clickhouse with a simple query...")
-# query_ranks = Path("queries/website_by_keyword.sql").read_text(encoding="utf-8")
-# df = ch_client.query_df(
-#     query_ranks, parameters={"keywords": ["hi", "buy"], "similarity": [0.9, 0.8]}
-# )
-# logger.info("Test query result:\n%s", df.head())
 
 # Select Backend
 if BACKEND == "ollama":
@@ -76,6 +73,11 @@ storage = VectorStoreEmbedding(
 )
 logger.info("VectorStoreEmbedding initialized successfully.")
 
+
+openai_client = OpenAI(
+    base_url="https://openrouter.ai/api/v1",
+    api_key=os.environ["OPENROUTER_KEY"],
+)
 
 # FastAPI Setup
 app = FastAPI(title="Website Semantic Search API")
@@ -143,8 +145,22 @@ class KeywordResult(BaseModel):
 
 
 @app.get("/similar-keywords", response_model=list[KeywordResult])
-def similar_keywords(query: str = Query(...), top_k: int = 32):
+def similar_keywords(
+    query: str = Query(...),
+    top_k: int = 32,
+    augmentation: bool = False,
+):
     """Search keywords similar to the input query."""
+
+    if augmentation:
+        query = generate_similar_terms(
+            term=query,
+            model=OPENROUTER_MODEL,
+            openai_client=openai_client,
+        )
+        
+        results = storage.search(query=query, top_k=top_k)
+        
 
     results = storage.search(query=query, top_k=top_k)
     logger.info("Retrieved %d results from vector store", len(results.points))

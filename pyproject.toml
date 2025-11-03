@@ -8,6 +8,7 @@ dependencies = [
     "attrs>=25.4.0",
     "clickhouse-connect>=0.9.2",
     "fastapi[standard]>=0.120.0",
+    "openai>=2.6.1",
     "pandas>=2.3.3",
     "qdrant-client>=1.15.1",
     "sentence-transformers>=5.1.2",
