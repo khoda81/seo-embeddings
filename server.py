@@ -171,7 +171,9 @@ def similar_keywords(
                     logger.warning("Missing 'text' in payload: %s", r.payload)
 
         n = len(queries)
-        return [KeywordResult(kw, sc / n) for (kw, sc) in scores.items()]
+        return [
+            KeywordResult(keyword=kw, similarity=sc / n) for (kw, sc) in scores.items()
+        ]
 
     results = storage.search(query=query, top_k=top_k)
     logger.info("Retrieved %d results from vector store", len(results.points))
