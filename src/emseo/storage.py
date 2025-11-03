@@ -76,9 +76,14 @@ class VectorStoreEmbedding:
         top_k: int = 5,
         with_payload: bool = True,
         score_threshold: float | None = None,
+        cached: bool = False,
     ) -> QueryResponse:
         if isinstance(query, str):
-            vector = self.embedder.embed([query]).embedding[0].cpu().tolist()
+            if not cached:
+                vector = self.embedder.backend.embed_texts([query])
+
+            else:
+                vector = self.embedder.embed([query]).embedding[0].cpu().tolist()
 
         elif isinstance(query, list):
             vector = query
