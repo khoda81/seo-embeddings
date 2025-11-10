@@ -7,6 +7,7 @@ import clickhouse_connect
 import dotenv
 import pandas as pd
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
 from pydantic import BaseModel
 
@@ -17,6 +18,15 @@ from emseo.storage import VectorStoreEmbedding
 
 dotenv.load_dotenv()
 
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or specify your domain list
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ------------------------------
 # Configuration

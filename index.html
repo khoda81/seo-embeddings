@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Website Relevance Search</title>
+        <style>
+            body {
+                font-family: system-ui, sans-serif;
+                background: #f8f9fa;
+                margin: 0;
+                padding: 2rem;
+            }
+            h1 {
+                text-align: center;
+                color: #333;
+            }
+            .search-box {
+                display: flex;
+                justify-content: center;
+                margin-bottom: 2rem;
+            }
+            input {
+                width: 60%;
+                padding: 0.7rem 1rem;
+                font-size: 1rem;
+                border: 1px solid #ccc;
+                border-radius: 0.5rem;
+            }
+            button {
+                padding: 0.7rem 1rem;
+                margin-left: 0.5rem;
+                background: #00857c;
+                color: white;
+                border: none;
+                border-radius: 0.5rem;
+                cursor: pointer;
+            }
+            button:hover {
+                background: #006f67;
+            }
+            .results {
+                display: grid;
+                gap: 1rem;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            }
+            .card {
+                background: white;
+                border-radius: 0.75rem;
+                padding: 1rem;
+                box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            }
+            .website {
+                font-weight: 600;
+                color: #333;
+                margin-bottom: 0.5rem;
+                word-break: break-word;
+            }
+            .score-bar {
+                position: relative;
+                height: 8px;
+                background: #eee;
+                border-radius: 4px;
+                overflow: hidden;
+            }
+            .score-fill {
+                position: absolute;
+                height: 100%;
+                left: 0;
+                top: 0;
+                width: 0%;
+                border-radius: 4px;
+                transition: width 0.4s ease, background-color 0.4s ease;
+            }
+            .score-text {
+                text-align: right;
+                font-size: 0.85rem;
+                margin-top: 0.4rem;
+                color: #555;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Website Relevance Search</h1>
+        <div class="search-box">
+            <input type="text" id="query" placeholder="Type your query..." />
+            <button onclick="search()">Search</button>
+        </div>
+        <div id="results" class="results"></div>
+
+        <script>
+            async function search() {
+                const query = document.getElementById("query").value.trim();
+                if (!query) return;
+
+                const resultsDiv = document.getElementById("results");
+                resultsDiv.innerHTML = "<p>Loading...</p>";
+
+                try {
+                    const res = await fetch(
+                        `http://185.8.172.121:8000/search?query=${encodeURIComponent(query)}&top_k=1024`
+                    );
+                    const data = await res.json();
+
+                    resultsDiv.innerHTML = "";
+                    data.forEach((item) => {
+                        const scorePercent = Math.round(item.score * 100);
+                        const color = getColor(scorePercent);
+
+                        const card = document.createElement("div");
+                        card.className = "card";
+
+                        card.innerHTML = `
+        <div class="website">${item.website}</div>
+        <div class="score-bar">
+          <div class="score-fill" style="width:${scorePercent}%; background:${color};"></div>
+        </div>
+        <div class="score-text">${scorePercent}/100</div>
+      `;
+                        resultsDiv.appendChild(card);
+                    });
+                } catch (e) {
+                    resultsDiv.innerHTML = `<p style="color:red;">Error fetching results: ${e.message}</p>`;
+                }
+            }
+
+            function getColor(score) {
+                // interpolate from red (0) → yellow (50) → green (100)
+                const r = score < 50 ? 255 : Math.round(255 - (score - 50) * 5.1);
+                const g = score < 50 ? Math.round(score * 5.1) : 255;
+                return `rgb(${r},${g},0)`;
+            }
+        </script>
+    </body>
+</html>
