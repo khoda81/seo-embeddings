@@ -2,9 +2,9 @@ from sentence_transformers import SentenceTransformer
 
 
 class HuggingFaceBackend:
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str, **kwargs):
         self.model_name = model_name
-        self.model = SentenceTransformer(model_name)
+        self.model = SentenceTransformer(model_name, **kwargs)
 
     def get_dim(self) -> int:
         return self.model.get_sentence_embedding_dimension()

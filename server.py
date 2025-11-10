@@ -60,7 +60,7 @@ if BACKEND == "ollama":
 
 elif BACKEND == "huggingface":
     model_name = MODEL_NAME or "intfloat/multilingual-e5-large"
-    backend = HuggingFaceBackend(model_name=model_name)
+    backend = HuggingFaceBackend(model_name=model_name, trust_remote_code=True)
     logger.info("Using HuggingFace backend with model '%s'", model_name)
 
 else:
