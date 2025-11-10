@@ -107,7 +107,7 @@ class ScoreFunction(str, Enum):
 @app.get("/search", response_model=list[SearchResult])
 def search(
     query: str = Query(..., description="Search query string"),
-    top_k: int = Query(32, ge=1, description="Top-k results to retrieve"),
+    top_k: int = Query(32, ge=1, description="Top-k keyword limit"),
     score_function: ScoreFunction = Query(ScoreFunction.LOG_MEAN),
 ):
     """Search websites similar to the input query."""
@@ -190,7 +190,7 @@ class KeywordResult(BaseModel):
 @app.get("/similar-keywords", response_model=list[KeywordResult])
 def similar_keywords(
     query: str = Query(...),
-    top_k: int = 32,
+    top_k: int = Query(32, ge=1, description="Top-k keyword limit"),
     augmentation: bool = False,
 ):
     """Search keywords similar to the input query."""
@@ -247,7 +247,10 @@ class RankEntry(BaseModel):
 
 
 @app.get("/ranking-entries", response_model=list[RankEntry])
-def entries(query: str = Query(...), top_k: int = 32):
+def entries(
+    query: str = Query(...),
+    top_k: int = Query(32, ge=1, description="Top-k keyword limit"),
+):
     """Search keywords similar to the input query."""
 
     results = storage.search(query=query, top_k=top_k)
