@@ -18,15 +18,6 @@ from emseo.storage import VectorStoreEmbedding
 
 dotenv.load_dotenv()
 
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # or specify your domain list
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # ------------------------------
 # Configuration
@@ -92,6 +83,13 @@ openai_client = OpenAI(
 
 # FastAPI Setup
 app = FastAPI(title="Website Semantic Search API")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or specify your domain list
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 class SearchResult(BaseModel):
