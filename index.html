@@ -144,7 +144,7 @@
 
                 try {
                     const res = await fetch(
-                        `http://185.8.172.121:8000/search?query=${encodeURIComponent(query)}&top_k=${top_k}`
+                        `http://185.8.172.121:8000/search?query=${encodeURIComponent(query)}&top_k=${top_k}&score_function=log_mean`
                     );
                     if (!res.ok) throw new Error(res.statusText);
                     const data = await res.json();

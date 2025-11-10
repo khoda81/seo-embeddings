@@ -101,14 +101,14 @@ class SearchResult(BaseModel):
 
 class ScoreFunction(str, Enum):
     WEIGHTED_SIM = "weighted_sim"
-    LOG_MEAN = "log_mean"  # name clearer than "..." placeholder
+    LOG_MEAN = "log_mean"
 
 
 @app.get("/search", response_model=list[SearchResult])
 def search(
     query: str = Query(..., description="Search query string"),
     top_k: int = Query(32, ge=1, description="Top-k results to retrieve"),
-    score_function: ScoreFunction = Query(ScoreFunction.WEIGHTED_SIM),
+    score_function: ScoreFunction = Query(ScoreFunction.LOG_MEAN),
 ):
     """Search websites similar to the input query."""
     logger.info("Received search query='%s' (top_k=%d)", query, top_k)
