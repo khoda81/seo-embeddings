@@ -16,7 +16,7 @@ FROM (
         SELECT keyword,
             website,
             average_position
-        FROM ahrefs.keywords
+        FROM ahrefs.words
     ) AS d ON q.keyword = d.keyword -- ORDER BY keyword
     -- GROUP BY website 
     -- ORDER BY weighted_score DESC
