@@ -1,10 +1,12 @@
 import logging
 import os
 from collections import defaultdict
+from enum import Enum
 from pathlib import Path
 
 import clickhouse_connect
 import dotenv
+import numpy as np
 import pandas as pd
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -85,7 +87,7 @@ openai_client = OpenAI(
 app = FastAPI(title="Website Semantic Search API")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or specify your domain list
+    allow_origins=["*"],  # TODO: specify domain list
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -97,32 +99,46 @@ class SearchResult(BaseModel):
     score: float
 
 
+class ScoreFunction(str, Enum):
+    WEIGHTED_SIM = "weighted_sim"
+    LOG_MEAN = "log_mean"  # name clearer than "..." placeholder
+
+
 @app.get("/search", response_model=list[SearchResult])
-def search(query: str = Query(...), top_k: int = 32):
+def search(
+    query: str = Query(..., description="Search query string"),
+    top_k: int = Query(32, ge=1, description="Top-k results to retrieve"),
+    score_function: ScoreFunction = Query(ScoreFunction.WEIGHTED_SIM),
+):
     """Search websites similar to the input query."""
     logger.info("Received search query='%s' (top_k=%d)", query, top_k)
 
+    # --- Query the vector store ---
     results = storage.search(query=query, top_k=top_k)
     logger.info("Retrieved %d results from vector store", len(results.points))
 
+    # --- Build keyword–similarity pairs ---
     kw_website_pairs = []
     for r in results.points:
-        if "text" in r.payload:
+        payload = r.payload or {}
+        if "text" in payload:
             kw_website_pairs.append(
                 {
                     "similarity": r.score,
-                    "keyword": r.payload["text"],
+                    "keyword": payload["text"],
                 }
             )
-
         else:
-            logger.warning("Missing 'text' in payload: %s", r.payload)
+            logger.warning("Missing 'text' in payload: %s", payload)
+
+    if not kw_website_pairs:
+        logger.warning("No valid keyword payloads found — returning empty result.")
+        return []
 
     kw_website_pairs = pd.DataFrame(kw_website_pairs)
-    query_ranks = Path("queries/website_by_keyword.sql").read_text(encoding="utf-8")
-    logger.debug("Query: %s", query_ranks)
-    logger.debug("Parameters: %s", kw_website_pairs.head())
 
+    # --- Query ranks ---
+    query_ranks = Path("queries/website_by_keyword.sql").read_text(encoding="utf-8")
     ranks = ch_client.query_df(
         query_ranks,
         parameters={
@@ -131,20 +147,38 @@ def search(query: str = Query(...), top_k: int = 32):
         },
     ).rename(columns={"q.similarity": "similarity"})
 
-    ranks["score"] = ranks["similarity"] / ranks["average_position"]
-    ranked_websites = (
-        ranks.groupby("website")["score"].mean().sort_values(ascending=False)
-    )
+    # --- Compute scores depending on function ---
+    if score_function == ScoreFunction.WEIGHTED_SIM:
+        ranks["score"] = ranks["similarity"] / ranks["average_position"]
 
-    logger.info("Returning %d ranked websites", len(ranked_websites))
+        ranked_websites = (
+            ranks.groupby("website")["score"].mean().sort_values(ascending=False)
+        )
 
-    # Convert the Series → list of dicts
+    elif score_function == ScoreFunction.LOG_MEAN:
+        # Guard: make sure `score` exists
+        if "score" not in ranks.columns:
+            ranks["score"] = ranks["similarity"] / ranks["average_position"]
+
+        agg = ranks.groupby("website").agg(
+            mean_score=("score", "mean"),
+            n=("score", "count"),
+        )
+        agg["final_score"] = agg["mean_score"] * (1 + np.log1p(agg["n"]))
+        ranked_websites = agg["final_score"].sort_values(ascending=False)
+
+    else:
+        # TODO: Return a proper error response
+        logger.error("Unsupported score_function: %s", score_function)
+        return []
+
+    # --- Prepare and return response ---
     result = [
-        {"website": website, "score": float(score)}
+        SearchResult(website=str(website), score=float(score))
         for website, score in ranked_websites.items()
     ]
 
-    logger.debug("Results: %s", result)
+    logger.info("Returning %d ranked websites", len(result))
     return result
 
 
