@@ -192,9 +192,13 @@ def similar_keywords(
     query: str = Query(...),
     top_k: int = Query(32, ge=1, description="Top-k keyword limit"),
     augmentation: bool = False,
+    similarity_threshold: float = Query(0.5, ge=0.0, le=1.0),
 ):
-    """Search keywords similar to the input query."""
+    """Search keywords similar to the input query, with optional augmentation and similarity threshold."""
 
+    # -----------------------------
+    # AUGMENTATION MODE
+    # -----------------------------
     if augmentation:
         queries = generate_similar_terms(
             term=query,
@@ -202,13 +206,18 @@ def similar_keywords(
             openai_client=openai_client,
         )
 
-        results = storage.search_batched(queries=queries, top_k=top_k)
+        # pass threshold to batched search
+        results = storage.search_batched(
+            queries=queries,
+            top_k=top_k,
+            score_threshold=similarity_threshold,
+        )
+
         scores = defaultdict(float)
         for result in results:
             for r in result.points:
                 if "text" in r.payload:
                     scores[r.payload["text"]] += r.score
-
                 else:
                     logger.warning("Missing 'text' in payload: %s", r.payload)
 
@@ -220,23 +229,30 @@ def similar_keywords(
         output.sort(key=lambda r: r.similarity, reverse=True)
         return output
 
-    results = storage.search(query=query, top_k=top_k)
+    # -----------------------------
+    # NORMAL MODE
+    # -----------------------------
+    results = storage.search(
+        query=query,
+        top_k=top_k,
+        score_threshold=similarity_threshold,
+    )
+
     logger.info("Retrieved %d results from vector store", len(results.points))
 
-    kw_website_pairs = []
+    output = []
     for r in results.points:
         if "text" in r.payload:
-            kw_website_pairs.append(
-                {
-                    "similarity": r.score,
-                    "keyword": r.payload["text"],
-                }
+            output.append(
+                KeywordResult(
+                    similarity=r.score,
+                    keyword=r.payload["text"],
+                )
             )
-
         else:
             logger.warning("Missing 'text' in payload: %s", r.payload)
 
-    return kw_website_pairs
+    return output
 
 
 class RankEntry(BaseModel):
