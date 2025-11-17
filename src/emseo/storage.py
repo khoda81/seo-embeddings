@@ -77,6 +77,7 @@ class VectorStoreEmbedding:
         with_payload: bool = True,
         score_threshold: float | None = None,
         cached: bool = False,
+        timeout: int | None = None,
     ) -> QueryResponse:
         if isinstance(query, str):
             if cached:
@@ -97,6 +98,7 @@ class VectorStoreEmbedding:
             limit=top_k,
             with_payload=with_payload,
             score_threshold=score_threshold,
+            timeout=timeout,
         )
 
         return results

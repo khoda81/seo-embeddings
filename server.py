@@ -84,7 +84,7 @@ openai_client = OpenAI(
 )
 
 # FastAPI Setup
-app = FastAPI(title="Website Semantic Search API")
+app = FastAPI(title="Topical Authority Keyword Similarity API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # TODO: specify domain list
@@ -236,6 +236,7 @@ def similar_keywords(
         query=query,
         top_k=top_k,
         score_threshold=similarity_threshold,
+        timeout=60,
     )
 
     logger.info("Retrieved %d results from vector store", len(results.points))
