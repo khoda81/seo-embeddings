@@ -16,10 +16,11 @@ class VectorStoreEmbedding:
         collection_prefix: str,
         qdrant_url: str = "http://127.0.0.1:6333",
         distance: Distance = Distance.COSINE,
+        api_key: str = None,
     ):
         self.backend = backend
         self.embedder = BaseCachedEmbedding(backend)
-        self.qdrant = QdrantClient(url=qdrant_url)
+        self.qdrant = QdrantClient(url=qdrant_url, api_key=api_key)
 
         # Unique collection name per model/backend
         self.collection_name = f"{collection_prefix}_{self.backend.identifier()}"

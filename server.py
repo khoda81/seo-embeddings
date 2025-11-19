@@ -27,6 +27,7 @@ dotenv.load_dotenv()
 BACKEND = os.getenv("BACKEND", "huggingface").lower()
 MODEL_NAME = os.getenv("MODEL_NAME", "intfloat/multilingual-e5-large")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://127.0.0.1:6333")
+QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)
 OPENROUTER_MODEL = "gpt-4o-mini"
 
 
@@ -74,6 +75,7 @@ storage = VectorStoreEmbedding(
     backend,
     collection_prefix="keywords",
     qdrant_url=QDRANT_URL,
+    api_key=QDRANT_API_KEY,
 )
 logger.info("VectorStoreEmbedding initialized successfully.")
 
@@ -243,15 +245,12 @@ def similar_keywords(
 
     output = []
     for r in results.points:
-        if "text" in r.payload:
-            output.append(
-                KeywordResult(
-                    similarity=r.score,
-                    keyword=r.payload["text"],
-                )
+        output.append(
+            KeywordResult(
+                similarity=r.score,
+                keyword=r.payload["text"],
             )
-        else:
-            logger.warning("Missing 'text' in payload: %s", r.payload)
+        )
 
     return output
 
