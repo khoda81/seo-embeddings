@@ -25,6 +25,7 @@ dotenv.load_dotenv()
 # Configuration
 # ------------------------------
 BACKEND = os.getenv("BACKEND", "huggingface").lower()
+HF_TOKEN = os.getenv("HF_API_KEY", None)
 MODEL_NAME = os.getenv("MODEL_NAME", "intfloat/multilingual-e5-large")
 QDRANT_URL = os.getenv("QDRANT_URL", "http://127.0.0.1:6333")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY", None)
@@ -64,7 +65,11 @@ if BACKEND == "ollama":
 
 elif BACKEND == "huggingface":
     model_name = MODEL_NAME or "intfloat/multilingual-e5-large"
-    backend = HuggingFaceBackend(model_name=model_name, trust_remote_code=True)
+    backend = HuggingFaceBackend(
+        model_name=model_name,
+        trust_remote_code=True,
+        token=HF_TOKEN,
+    )
     logger.info("Using HuggingFace backend with model '%s'", model_name)
 
 else:
