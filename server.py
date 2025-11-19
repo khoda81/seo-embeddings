@@ -96,6 +96,11 @@ app.add_middleware(
 )
 
 
+@app.get("/embed", response_model=list[float])
+def embed(query: str = Query(...)):
+    return storage.embedder.backend.embed_texts([query])[0]
+
+
 class SearchResult(BaseModel):
     website: str
     score: float
