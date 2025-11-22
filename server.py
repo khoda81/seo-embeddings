@@ -253,16 +253,15 @@ def similar_keywords(
 
     logger.info("Retrieved %d results from vector store", len(results.points))
 
-    output = []
+    output = {}
     for r in results.points:
-        output.append(
-            KeywordResult(
-                similarity=r.score,
-                keyword=r.payload["text"],
-            )
+        keyword = r.payload["text"]
+        output[keyword] = KeywordResult(
+            similarity=r.score,
+            keyword=keyword,
         )
 
-    return output
+    return output.values()
 
 
 class RankEntry(BaseModel):
